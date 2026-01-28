@@ -30,6 +30,8 @@ router = APIRouter(prefix="/movies", tags=["movies"])
 
 def _page_url(request: Request, page: int, per_page: int) -> str:
     path = request.url.path
+    if path.startswith("/api/v1"):
+        path = path[len("/api/v1"):]
     return f"{path}?page={page}&per_page={per_page}"
 
 
