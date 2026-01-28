@@ -3,7 +3,10 @@ from __future__ import annotations
 import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
+
+
+ALLOWED_STATUSES = {"Released", "Post Production", "In Production"}
 
 
 class CountrySchema(BaseModel):
@@ -71,6 +74,19 @@ class MovieCreateSchema(BaseModel):
     actors: List[str]
     languages: List[str]
 
+    @validator("status")
+    def validate_status(cls, value: str) -> str:
+        if value not in ALLOWED_STATUSES:
+            raise ValueError("Invalid input data.")
+        return value
+
+    @validator("country")
+    def validate_country(cls, value: str) -> str:
+        # ISO 3166-1 alpha-3: 3 letters
+        if not isinstance(value, str) or len(value) != 3 or not value.isalpha():
+            raise ValueError("Invalid input data.")
+        return value.upper()
+
 
 class MovieUpdateSchema(BaseModel):
     name: Optional[str] = Field(default=None, max_length=255)
@@ -80,6 +96,14 @@ class MovieUpdateSchema(BaseModel):
     status: Optional[str] = None
     budget: Optional[float] = None
     revenue: Optional[float] = None
+
+    @validator("status")
+    def validate_status(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        if value not in ALLOWED_STATUSES:
+            raise ValueError("Invalid input data.")
+        return value
 
 
 class MovieDetailSchema(BaseModel):

@@ -23,6 +23,7 @@ from schemas.movies import (
     MovieDetailSchema,
     MovieListResponseSchema,
     MovieUpdateSchema,
+    ALLOWED_STATUSES,
 )
 
 router = APIRouter(prefix="/movies", tags=["movies"])
@@ -45,6 +46,13 @@ def _validate_movie_fields_for_create(payload: MovieCreateSchema) -> None:
     if payload.budget < 0 or payload.revenue < 0:
         raise HTTPException(status_code=400, detail="Invalid input data.")
 
+    # Extra safety (even though schema validates)
+    if payload.status not in ALLOWED_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid input data.")
+
+    if len(payload.country) != 3 or not payload.country.isalpha():
+        raise HTTPException(status_code=400, detail="Invalid input data.")
+
 
 def _validate_movie_fields_for_update(data: dict) -> None:
     if "score" in data and data["score"] is not None:
@@ -59,6 +67,10 @@ def _validate_movie_fields_for_update(data: dict) -> None:
 
     if "date" in data and data["date"] is not None:
         if data["date"] > (datetime.date.today() + datetime.timedelta(days=365)):
+            raise HTTPException(status_code=400, detail="Invalid input data.")
+
+    if "status" in data and data["status"] is not None:
+        if data["status"] not in ALLOWED_STATUSES:
             raise HTTPException(status_code=400, detail="Invalid input data.")
 
 
@@ -157,12 +169,18 @@ async def create_movie(movie: MovieCreateSchema, db: AsyncSession = Depends(get_
             await db.flush()
         languages.append(language)
 
+    # IMPORTANT: handle invalid status => 400, not 500
+    try:
+        status_enum = MovieStatusEnum(movie.status)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid input data.")
+
     new_movie = MovieModel(
         name=movie.name,
         date=movie.date,
         score=movie.score,
         overview=movie.overview,
-        status=MovieStatusEnum(movie.status),
+        status=status_enum,
         budget=movie.budget,
         revenue=movie.revenue,
         country=country,
@@ -236,7 +254,10 @@ async def update_movie(
 
     for field, value in data.items():
         if field == "status" and value is not None:
-            value = MovieStatusEnum(value)
+            try:
+                value = MovieStatusEnum(value)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid input data.")
         setattr(movie, field, value)
 
     await db.commit()
