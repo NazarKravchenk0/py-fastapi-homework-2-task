@@ -1,13 +1,15 @@
-from datetime import date, timedelta
+from __future__ import annotations
+
+from datetime import date
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 
 class CountrySchema(BaseModel):
     id: int
     code: str
-    name: Optional[str]
+    name: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -37,36 +39,6 @@ class LanguageSchema(BaseModel):
         orm_mode = True
 
 
-class MovieCreateSchema(BaseModel):
-    name: str = Field(max_length=255)
-    date: date
-    score: float = Field(ge=0, le=100)
-    overview: str
-    status: str
-    budget: float = Field(ge=0)
-    revenue: float = Field(ge=0)
-    country: str  # tests use "US"
-    genres: List[str]
-    actors: List[str]
-    languages: List[str]
-
-    @validator("date")
-    def validate_date(cls, value: date) -> date:
-        if value > date.today() + timedelta(days=365):
-            raise ValueError("Date cannot be more than one year in the future")
-        return value
-
-
-class MovieUpdateSchema(BaseModel):
-    name: Optional[str] = Field(default=None, max_length=255)
-    date: Optional[date] = None
-    score: Optional[float] = Field(default=None, ge=0, le=100)
-    overview: Optional[str] = None
-    status: Optional[str] = None
-    budget: Optional[float] = Field(default=None, ge=0)
-    revenue: Optional[float] = Field(default=None, ge=0)
-
-
 class MovieListItemSchema(BaseModel):
     id: int
     name: str
@@ -84,6 +56,30 @@ class MovieListResponseSchema(BaseModel):
     next_page: Optional[str]
     total_pages: int
     total_items: int
+
+
+class MovieCreateSchema(BaseModel):
+    name: str = Field(..., max_length=255)
+    date: date
+    score: float
+    overview: str
+    status: str
+    budget: float
+    revenue: float
+    country: str
+    genres: List[str]
+    actors: List[str]
+    languages: List[str]
+
+
+class MovieUpdateSchema(BaseModel):
+    name: Optional[str] = Field(default=None, max_length=255)
+    date: Optional[date] = None
+    score: Optional[float] = None
+    overview: Optional[str] = None
+    status: Optional[str] = None
+    budget: Optional[float] = None
+    revenue: Optional[float] = None
 
 
 class MovieDetailSchema(BaseModel):
