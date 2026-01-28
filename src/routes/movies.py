@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+import datetime
 from math import ceil
 from typing import Optional
 
@@ -29,21 +29,17 @@ router = APIRouter(prefix="/movies", tags=["movies"])
 
 
 def _page_url(request: Request, page: int, per_page: int) -> str:
-    # request.url.path already includes /api/v1 prefix if it exists in main.py router include
     path = request.url.path
     return f"{path}?page={page}&per_page={per_page}"
 
 
 def _validate_movie_fields_for_create(payload: MovieCreateSchema) -> None:
-    # date <= today + 1 year
-    if payload.date > (date.today() + timedelta(days=365)):
+    if payload.date > (datetime.date.today() + datetime.timedelta(days=365)):
         raise HTTPException(status_code=400, detail="Invalid input data.")
 
-    # score 0..100
     if payload.score < 0 or payload.score > 100:
         raise HTTPException(status_code=400, detail="Invalid input data.")
 
-    # budget/revenue >= 0
     if payload.budget < 0 or payload.revenue < 0:
         raise HTTPException(status_code=400, detail="Invalid input data.")
 
@@ -60,7 +56,7 @@ def _validate_movie_fields_for_update(data: dict) -> None:
         raise HTTPException(status_code=400, detail="Invalid input data.")
 
     if "date" in data and data["date"] is not None:
-        if data["date"] > (date.today() + timedelta(days=365)):
+        if data["date"] > (datetime.date.today() + datetime.timedelta(days=365)):
             raise HTTPException(status_code=400, detail="Invalid input data.")
 
 
@@ -71,7 +67,6 @@ async def get_movies(
     per_page: int = Query(10, ge=1, le=20),
     db: AsyncSession = Depends(get_db),
 ):
-    # total_items
     count_stmt = select(func.count(MovieModel.id))
     total_items = (await db.execute(count_stmt)).scalar_one()
 
@@ -112,7 +107,6 @@ async def get_movies(
 async def create_movie(movie: MovieCreateSchema, db: AsyncSession = Depends(get_db)):
     _validate_movie_fields_for_create(movie)
 
-    # duplicate check by (name, date)
     dup_stmt = select(MovieModel).where(
         MovieModel.name == movie.name,
         MovieModel.date == movie.date,
@@ -124,7 +118,6 @@ async def create_movie(movie: MovieCreateSchema, db: AsyncSession = Depends(get_
             detail=f"A movie with the name '{movie.name}' and release date '{movie.date}' already exists.",
         )
 
-    # Country (get or create)
     country_stmt = select(CountryModel).where(CountryModel.code == movie.country)
     country = (await db.execute(country_stmt)).scalars().first()
     if not country:
@@ -132,38 +125,35 @@ async def create_movie(movie: MovieCreateSchema, db: AsyncSession = Depends(get_
         db.add(country)
         await db.flush()
 
-    # Genres (get or create)
     genres = []
     for name in movie.genres:
-        g_stmt = select(GenreModel).where(GenreModel.name == name)
-        g = (await db.execute(g_stmt)).scalars().first()
-        if not g:
-            g = GenreModel(name=name)
-            db.add(g)
+        stmt = select(GenreModel).where(GenreModel.name == name)
+        genre = (await db.execute(stmt)).scalars().first()
+        if not genre:
+            genre = GenreModel(name=name)
+            db.add(genre)
             await db.flush()
-        genres.append(g)
+        genres.append(genre)
 
-    # Actors (get or create)
     actors = []
     for name in movie.actors:
-        a_stmt = select(ActorModel).where(ActorModel.name == name)
-        a = (await db.execute(a_stmt)).scalars().first()
-        if not a:
-            a = ActorModel(name=name)
-            db.add(a)
+        stmt = select(ActorModel).where(ActorModel.name == name)
+        actor = (await db.execute(stmt)).scalars().first()
+        if not actor:
+            actor = ActorModel(name=name)
+            db.add(actor)
             await db.flush()
-        actors.append(a)
+        actors.append(actor)
 
-    # Languages (get or create)
     languages = []
     for name in movie.languages:
-        l_stmt = select(LanguageModel).where(LanguageModel.name == name)
-        l = (await db.execute(l_stmt)).scalars().first()
-        if not l:
-            l = LanguageModel(name=name)
-            db.add(l)
+        stmt = select(LanguageModel).where(LanguageModel.name == name)
+        language = (await db.execute(stmt)).scalars().first()
+        if not language:
+            language = LanguageModel(name=name)
+            db.add(language)
             await db.flush()
-        languages.append(l)
+        languages.append(language)
 
     new_movie = MovieModel(
         name=movie.name,
@@ -182,7 +172,6 @@ async def create_movie(movie: MovieCreateSchema, db: AsyncSession = Depends(get_
     db.add(new_movie)
     await db.commit()
 
-    # Reload with relations for response
     stmt = (
         select(MovieModel)
         .options(

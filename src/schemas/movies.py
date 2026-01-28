@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -42,7 +42,7 @@ class LanguageSchema(BaseModel):
 class MovieListItemSchema(BaseModel):
     id: int
     name: str
-    date: date
+    date: datetime.date
     score: float
     overview: str
 
@@ -60,7 +60,7 @@ class MovieListResponseSchema(BaseModel):
 
 class MovieCreateSchema(BaseModel):
     name: str = Field(..., max_length=255)
-    date: date
+    date: datetime.date
     score: float
     overview: str
     status: str
@@ -74,7 +74,7 @@ class MovieCreateSchema(BaseModel):
 
 class MovieUpdateSchema(BaseModel):
     name: Optional[str] = Field(default=None, max_length=255)
-    date: Optional[date] = None
+    date: Optional[datetime.date] = None
     score: Optional[float] = None
     overview: Optional[str] = None
     status: Optional[str] = None
@@ -85,7 +85,7 @@ class MovieUpdateSchema(BaseModel):
 class MovieDetailSchema(BaseModel):
     id: int
     name: str
-    date: date
+    date: datetime.date
     score: float
     overview: str
     status: str
